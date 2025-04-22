@@ -19,7 +19,8 @@ func NewTaskHandler(store *store.TaskStore) *TaskHandler {
 
 func (h *TaskHandler) PrintTasksHttp(w http.ResponseWriter, r *http.Request) {
 	user, _, _ := r.BasicAuth()
-	tasks := h.store.GetAllTasks(user)
+	project := r.URL.Query().Get("pjt")
+	tasks := h.store.GetAllTasks(user, project)
 	w.WriteHeader(http.StatusOK)
 	if len(tasks) == 0 {
 		fmt.Fprintln(w, "No tasks found!")
@@ -40,6 +41,12 @@ func (h *TaskHandler) AddTaskHttp(w http.ResponseWriter, r *http.Request) {
 
 	// Get task from query parameter
 	task := r.URL.Query().Get("q")
+	project := r.URL.Query().Get("pjt")
+	if project == "" {
+		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
+		return
+	}
+
 	user, _, _ := r.BasicAuth()
 	if task == "" {
 		http.Error(w, "Task query parameter 'q' is required", http.StatusBadRequest)
@@ -48,7 +55,7 @@ func (h *TaskHandler) AddTaskHttp(w http.ResponseWriter, r *http.Request) {
 
 	// Add to global tasks slice
 	key := fmt.Sprintf("task_%d", time.Now().UnixNano())
-	if success := h.store.AddTask(user, key, task); !success {
+	if success := h.store.AddTask(user, project, key, task); !success {
 		http.Error(w, "Task already exists", http.StatusBadRequest)
 		return
 	}
@@ -66,16 +73,17 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 
 	key := r.URL.Query().Get("key")
 	user, _, _ := r.BasicAuth()
+	project := r.URL.Query().Get("pjt")
 	if key == "" {
 		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
 		return
 	}
-	if !h.store.HasTask(user, key) {
+	if !h.store.HasTask(user, project, key) {
 		http.Error(w, "Task does not exist", http.StatusBadRequest)
 		return
 	}
-	task, _ := h.store.GetTask(user, key)
-	h.store.RemoveTask(user, key)
+	task, _ := h.store.GetTask(user, project, key)
+	h.store.RemoveTask(user, project, key)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "task: %s removed", task)
 }
@@ -89,6 +97,7 @@ func (h *TaskHandler) UpdateTaskHttp(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	user, _, _ := r.BasicAuth()
 	task := r.URL.Query().Get("q")
+	project := r.URL.Query().Get("pjt")
 	if key == "" {
 		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
 		return
@@ -99,12 +108,12 @@ func (h *TaskHandler) UpdateTaskHttp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.store.HasTask(user, key) {
+	if !h.store.HasTask(user, project, key) {
 		http.Error(w, "Task does not exist", http.StatusBadRequest)
 		return
 	}
 
-	h.store.UpdateTask(user, key, task)
+	h.store.UpdateTask(user, project, key, task)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, "task updated")
 }
