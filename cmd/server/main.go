@@ -30,9 +30,8 @@ func main() {
 
 	mux.HandleFunc("/welcome", auth.Authenticate(welcomeHandler.Welcome))
 	mux.HandleFunc("/printTasks", auth.Authenticate(taskHandler.PrintTasksHttp))
-	mux.HandleFunc("/addTask", auth.Authenticate(taskHandler.AddTaskHttp))
+	mux.HandleFunc("/writeTask", auth.Authenticate(taskHandler.WriteTaskHttp))
 	mux.HandleFunc("/removeTask", auth.Authenticate(taskHandler.RemoveTaskHttp))
-	mux.HandleFunc("/updateTask", auth.Authenticate(taskHandler.UpdateTaskHttp))
 	mux.HandleFunc("/deactivate", auth.Authenticate(userHandler.DeleteUser))
 	mux.HandleFunc("/register", userHandler.Register)
 
