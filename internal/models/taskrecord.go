@@ -8,4 +8,5 @@ type TaskRecord struct {
 	Priority    int       `json:"priority"` // Valid range: 0 to 3
 	UpdatedTime time.Time `json:"updatedTime"`
 	Due         time.Time `json:"due"`
+	Completed   bool      `json:"completed"`
 }

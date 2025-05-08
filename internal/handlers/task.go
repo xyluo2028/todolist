@@ -21,7 +21,7 @@ func NewTaskHandler(store *TaskStore) *TaskHandler {
 	}
 }
 
-func (h *TaskHandler) PrintTasksHttp(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) GetAllTasksFromPjtHttp(w http.ResponseWriter, r *http.Request) {
 	user, _, _ := r.BasicAuth()
 	project := r.URL.Query().Get("pjt")
 	tasks := h.store.GetAllTasks(user, project)
@@ -41,6 +41,21 @@ func (h *TaskHandler) PrintTasksHttp(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "Task %d: %s \n", tasknum, string(data))
 		tasknum++
+	}
+}
+
+func (h *TaskHandler) GetAllProjectsHttp(w http.ResponseWriter, r *http.Request) {
+	user, _, _ := r.BasicAuth()
+	projects := h.store.GetAllProjects(user)
+	w.WriteHeader(http.StatusOK)
+	if len(projects) == 0 {
+		fmt.Fprintln(w, "No projects found!")
+		return
+	}
+
+	fmt.Fprintln(w, "Projects: ")
+	for _, project := range projects {
+		fmt.Fprintf(w, "%s \n", project)
 	}
 }
 
@@ -89,6 +104,34 @@ func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Added task with key: %s at: %v", task.ID, task.UpdatedTime)
 }
 
+func (h *TaskHandler) CompleteTaskHttp(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	key := r.URL.Query().Get("key")
+	user, _, _ := r.BasicAuth()
+	project := r.URL.Query().Get("pjt")
+	if project == "" {
+		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
+		return
+	}
+	if key == "" {
+		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
+		return
+	}
+	if !h.store.HasTask(user, project, key) {
+		http.Error(w, "Task does not exist", http.StatusBadRequest)
+		return
+	}
+	task, _ := h.store.GetTask(user, project, key)
+	task.Completed = true
+	h.store.UpdateTask(user, project, key, task)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "task: %s completed", task.ID)
+}
+
 func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -98,6 +141,10 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	user, _, _ := r.BasicAuth()
 	project := r.URL.Query().Get("pjt")
+	if project == "" {
+		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
+		return
+	}
 	if key == "" {
 		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
 		return
@@ -110,4 +157,21 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 	h.store.RemoveTask(user, project, key)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "task: %s removed", task.ID)
+}
+
+func (h *TaskHandler) RemoveProjectHttp(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	project := r.URL.Query().Get("pjt")
+	user, _, _ := r.BasicAuth()
+	if project == "" {
+		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
+		return
+	}
+	h.store.RemoveProject(user, project)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "project: %s removed", project)
 }
