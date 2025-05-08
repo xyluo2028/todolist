@@ -29,10 +29,12 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/welcome", auth.Authenticate(welcomeHandler.Welcome))
-	mux.HandleFunc("/printTasks", auth.Authenticate(taskHandler.PrintTasksHttp))
-	mux.HandleFunc("/addTask", auth.Authenticate(taskHandler.AddTaskHttp))
+	mux.HandleFunc("/printTasks", auth.Authenticate(taskHandler.GetAllTasksFromPjtHttp))
+	mux.HandleFunc("/printProjects", auth.Authenticate(taskHandler.GetAllProjectsHttp))
+	mux.HandleFunc("/writeTask", auth.Authenticate(taskHandler.WriteTaskHttp))
+	mux.HandleFunc("/completeTask", auth.Authenticate(taskHandler.CompleteTaskHttp))
 	mux.HandleFunc("/removeTask", auth.Authenticate(taskHandler.RemoveTaskHttp))
-	mux.HandleFunc("/updateTask", auth.Authenticate(taskHandler.UpdateTaskHttp))
+	mux.HandleFunc("/removeProject", auth.Authenticate(taskHandler.RemoveProjectHttp))
 	mux.HandleFunc("/deactivate", auth.Authenticate(userHandler.DeleteUser))
 	mux.HandleFunc("/register", userHandler.Register)
 
