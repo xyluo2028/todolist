@@ -118,7 +118,7 @@ func (s *TaskStore) UpdateTask(user, project, key string, task TaskRecord) bool 
 	s.Lock()
 	defer s.Unlock()
 	s.EnsureUserMap(user)
-	s.EnsureProjectMap(user, key)
+	s.EnsureProjectMap(user, project)
 	// Check if the task exists
 	// If it doesn't exist, return false
 	_, exists := s.projects[user][project][key]
