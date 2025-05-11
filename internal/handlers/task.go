@@ -153,10 +153,9 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Task does not exist", http.StatusBadRequest)
 		return
 	}
-	task, _ := h.store.GetTask(user, project, key)
 	h.store.RemoveTask(user, project, key)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "task: %s removed", task.ID)
+	fmt.Fprintf(w, "task: %s removed", key)
 }
 
 func (h *TaskHandler) RemoveProjectHttp(w http.ResponseWriter, r *http.Request) {
