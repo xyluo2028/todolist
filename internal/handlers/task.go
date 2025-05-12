@@ -70,7 +70,7 @@ func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
 		return
 	}
-	var task TaskRecord
+	var task Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
