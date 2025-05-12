@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 	"todolist/internal/models"
@@ -22,7 +23,13 @@ func (repo *InMemTaskRepository) CreateTask(username, project string, task model
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
-	repo.EnsureProjectMap(username, project)
+	if _, exists := repo.tasks[username]; !exists {
+		repo.tasks[username] = make(map[string]map[string]models.Task)
+	}
+
+	if _, exists := repo.tasks[username][project]; !exists {
+		repo.tasks[username][project] = make(map[string]models.Task)
+	}
 
 	repo.tasks[username][project][task.ID] = task
 
@@ -33,7 +40,10 @@ func (repo *InMemTaskRepository) ListProjects(username string) ([]string, error)
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
 
-	repo.EnsureUserMap(username)
+	if _, exists := repo.tasks[username]; !exists {
+		fmt.Println("User not found")
+		return []string{}, nil
+	}
 	projects := make([]string, 0, len(repo.tasks[username]))
 	for project := range repo.tasks[username] {
 		projects = append(projects, project)
@@ -108,17 +118,4 @@ func (repo *InMemTaskRepository) CompleteTask(username, project, taskID string) 
 	task.Completed = true
 	repo.tasks[username][project][taskID] = task
 	return nil
-}
-
-func (repo *InMemTaskRepository) EnsureUserMap(username string) {
-	if _, exists := repo.tasks[username]; !exists {
-		repo.tasks[username] = make(map[string]map[string]models.Task)
-	}
-}
-
-func (repo *InMemTaskRepository) EnsureProjectMap(username, project string) {
-	repo.EnsureUserMap(username)
-	if _, exists := repo.tasks[username][project]; !exists {
-		repo.tasks[username][project] = make(map[string]models.Task)
-	}
 }
