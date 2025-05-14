@@ -3,16 +3,16 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"todolist/internal/store"
+	"todolist/internal/services"
 )
 
 type AuthMiddleware struct {
-	userStore *store.UserStore
+	userService *services.UserService
 }
 
-func NewAuthMiddleware(userStore *store.UserStore) *AuthMiddleware {
+func NewAuthMiddleware(userService *services.UserService) *AuthMiddleware {
 	return &AuthMiddleware{
-		userStore: userStore,
+		userService: userService,
 	}
 }
 
@@ -20,7 +20,8 @@ func (m *AuthMiddleware) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, password, _ := r.BasicAuth()
 		fmt.Fprintf(w, "Authenticating user %s ... \n \n", username)
-		if !m.userStore.Authenticate(username, password) {
+		if !m.userService.AuthenticateUser(username, password) {
+			// Authentication failed
 			w.Header().Set("WWW-Authenticate", `Basic realm="Todo App"`)
 			fmt.Fprintf(w, "User %s authentication failed \n", username)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)

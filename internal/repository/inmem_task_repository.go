@@ -19,7 +19,7 @@ func NewInMemTaskRepository() *InMemTaskRepository {
 	}
 }
 
-func (repo *InMemTaskRepository) CreateTask(username, project string, task models.Task) (bool, error) {
+func (repo *InMemTaskRepository) CreateTask(username, project string, task models.Task) error {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
@@ -30,10 +30,10 @@ func (repo *InMemTaskRepository) CreateTask(username, project string, task model
 	if _, exists := repo.tasks[username][project]; !exists {
 		repo.tasks[username][project] = make(map[string]models.Task)
 	}
-
+	task.UpdatedTime = time.Now()
 	repo.tasks[username][project][task.ID] = task
 
-	return true, nil
+	return nil
 }
 
 func (repo *InMemTaskRepository) ListProjects(username string) ([]string, error) {
@@ -84,26 +84,25 @@ func (repo *InMemTaskRepository) DeleteTask(username, project, taskID string) er
 	return nil
 }
 
-func (repo *InMemTaskRepository) DeleteProject(username, project string) {
+func (repo *InMemTaskRepository) DeleteProject(username, project string) error {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
 	delete(repo.tasks[username], project)
+	return nil
 }
 
-func (repo *InMemTaskRepository) DeleteUserTasks(username string) {
+func (repo *InMemTaskRepository) DeleteUserTasks(username string) error {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
 	delete(repo.tasks, username)
+	return nil
 }
 
-func (repo *InMemTaskRepository) GetTask(username, project, taskID string) (models.Task, error) {
+func (repo *InMemTaskRepository) GetTask(username, project, taskID string) (models.Task, bool) {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
 	task, exists := repo.tasks[username][project][taskID]
-	if !exists {
-		return task, errors.New("task not found")
-	}
-	return task, nil
+	return task, exists
 }
 
 func (repo *InMemTaskRepository) CompleteTask(username, project, taskID string) error {
