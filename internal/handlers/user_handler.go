@@ -3,18 +3,18 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"todolist/internal/store"
+	"todolist/internal/services"
 )
 
 type UserHandler struct {
-	userStore *store.UserStore
-	taskStore *store.TaskStore
+	userSvc *services.UserService
+	taskSvc *services.TaskService
 }
 
-func NewUserHandler(userStore *store.UserStore, taskStore *store.TaskStore) *UserHandler {
+func NewUserHandler(userSvc *services.UserService, taskSvc *services.TaskService) *UserHandler {
 	return &UserHandler{
-		userStore: userStore,
-		taskStore: taskStore,
+		userSvc: userSvc,
+		taskSvc: taskSvc,
 	}
 }
 
@@ -39,8 +39,8 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.userStore.AddUser(req.Username, req.Password) {
-		http.Error(w, "Username already exists", http.StatusConflict)
+	if err := h.userSvc.RegisterUser(req.Username, req.Password); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -62,12 +62,16 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.userStore.RemoveUser(username) {
-		http.Error(w, "User not found", http.StatusNotFound)
+	err := h.userSvc.DeactivateUser(username, h.taskSvc)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	h.taskStore.RemoveUserTasks(username)
+	errClearAllTasks := h.taskSvc.RemoveUserTasks(username)
+	if errClearAllTasks != nil {
+		http.Error(w, errClearAllTasks.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{

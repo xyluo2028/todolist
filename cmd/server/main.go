@@ -11,20 +11,23 @@ import (
 	"time"
 	"todolist/internal/handlers"
 	"todolist/internal/middleware"
-	"todolist/internal/store"
+	"todolist/internal/repository"
+	"todolist/internal/services"
 )
 
 func main() {
 
 	fmt.Println("Welcome to the Todo List!")
 
-	taskStore := store.NewTaskStore()
-	userStore := store.NewUserStore()
+	taskRepo := repository.NewInMemTaskRepository()
+	userRepo := repository.NewInMemUserRepository()
+	taskService := services.NewTaskService(taskRepo)
+	userService := services.NewUserService(userRepo)
 
-	taskHandler := handlers.NewTaskHandler(taskStore)
+	taskHandler := handlers.NewTaskHandler(taskService)
 	welcomeHandler := handlers.NewWelcomeHandler()
-	userHandler := handlers.NewUserHandler(userStore, taskStore)
-	auth := middleware.NewAuthMiddleware(userStore)
+	userHandler := handlers.NewUserHandler(userService, taskService)
+	auth := middleware.NewAuthMiddleware(userService)
 
 	mux := http.NewServeMux()
 

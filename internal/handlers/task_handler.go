@@ -4,27 +4,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
-	. "todolist/internal/models"
-	. "todolist/internal/store"
-
-	"github.com/google/uuid"
+	"todolist/internal/models"
+	"todolist/internal/services"
 )
 
 type TaskHandler struct {
-	store *TaskStore
+	svc *services.TaskService
 }
 
-func NewTaskHandler(store *TaskStore) *TaskHandler {
-	return &TaskHandler{
-		store: store,
-	}
+func NewTaskHandler(svc *services.TaskService) *TaskHandler {
+	return &TaskHandler{svc: svc}
 }
 
 func (h *TaskHandler) GetAllTasksFromPjtHttp(w http.ResponseWriter, r *http.Request) {
 	user, _, _ := r.BasicAuth()
 	project := r.URL.Query().Get("pjt")
-	tasks := h.store.GetAllTasks(user, project)
+	tasks, err := h.svc.GetTasks(user, project)
+	if err != nil {
+		http.Error(w, "Error retrieving tasks", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	if len(tasks) == 0 {
 		fmt.Fprintln(w, "No tasks found!")
@@ -46,7 +45,11 @@ func (h *TaskHandler) GetAllTasksFromPjtHttp(w http.ResponseWriter, r *http.Requ
 
 func (h *TaskHandler) GetAllProjectsHttp(w http.ResponseWriter, r *http.Request) {
 	user, _, _ := r.BasicAuth()
-	projects := h.store.GetAllProjects(user)
+	projects, err := h.svc.GetProjects(user)
+	if err != nil {
+		http.Error(w, "Error retrieving projects", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	if len(projects) == 0 {
 		fmt.Fprintln(w, "No projects found!")
@@ -70,38 +73,21 @@ func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
 		return
 	}
-	var task TaskRecord
+	var task models.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
 	}
 	user, _, _ := r.BasicAuth()
-	// Add to global tasks slice
-	if task.ID == "" {
-		task.ID = fmt.Sprintf("task_%s", uuid.New().String())
-	}
 
-	task.UpdatedTime = time.Now()
-	taskExists := h.store.HasTask(user, project, task.ID)
-	if taskExists {
-		if success := h.store.UpdateTask(user, project, task.ID, task); !success {
-			http.Error(w, "Failed to update task", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		if success := h.store.AddTask(user, project, task.ID, task); !success {
-			http.Error(w, "Failed to add task", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Return success message
-	w.WriteHeader(http.StatusOK)
-	if taskExists {
-		fmt.Fprintf(w, "Updated task with key: %s at: %v", task.ID, task.UpdatedTime)
+	task, err := h.svc.WriteTask(user, project, task)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error writing task: %v", err), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, "Added task with key: %s at: %v", task.ID, task.UpdatedTime)
+	// Return success message
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Write task with key: %s at: %v", task.ID, task.UpdatedTime)
 }
 
 func (h *TaskHandler) CompleteTaskHttp(w http.ResponseWriter, r *http.Request) {
@@ -121,15 +107,13 @@ func (h *TaskHandler) CompleteTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
 		return
 	}
-	if !h.store.HasTask(user, project, key) {
-		http.Error(w, "Task does not exist", http.StatusBadRequest)
+	err := h.svc.MarkTaskComplete(user, project, key)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error marking task as complete: %v", err), http.StatusInternalServerError)
 		return
 	}
-	task, _ := h.store.GetTask(user, project, key)
-	task.Completed = true
-	h.store.UpdateTask(user, project, key, task)
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "task: %s completed", task.ID)
+	fmt.Fprintf(w, "task: %s completed", key)
 }
 
 func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
@@ -149,11 +133,11 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
 		return
 	}
-	if !h.store.HasTask(user, project, key) {
-		http.Error(w, "Task does not exist", http.StatusBadRequest)
+	err := h.svc.RemoveTask(user, project, key)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error removing task: %v", err), http.StatusInternalServerError)
 		return
 	}
-	h.store.RemoveTask(user, project, key)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "task: %s removed", key)
 }
@@ -170,7 +154,11 @@ func (h *TaskHandler) RemoveProjectHttp(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
 		return
 	}
-	h.store.RemoveProject(user, project)
+	err := h.svc.RemoveProject(user, project)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error removing project: %v", err), http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "project: %s removed", project)
 }
