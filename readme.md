@@ -37,7 +37,7 @@ This API implements a simple Todo List using HTTP endpoints. All endpoints (exce
 - **Method:** POST
 - **Query Parameter:** `pjt` _(project name, required)_
 - **Authentication:** Basic
-- **Body:** JSON representation of a task (see [TaskRecord](./internal/models/taskrecord.go)); `id` is optional. If omitted, the server will generate a new one. The `updatedTime` field is set server-side.
+- **Body:** JSON representation of a task (see [Task](./internal/models/task.go)); `id` is optional. If omitted, the server will generate a new one. The `updatedTime` field is set server-side.
 - **Body Example:**
   ```json
   {
