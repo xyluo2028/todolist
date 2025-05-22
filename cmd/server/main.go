@@ -13,14 +13,30 @@ import (
 	"todolist/internal/middleware"
 	"todolist/internal/repository"
 	"todolist/internal/services"
+
+	"github.com/gocql/gocql"
 )
 
 func main() {
 
 	fmt.Println("Welcome to the Todo List!")
 
-	taskRepo := repository.NewInMemTaskRepository()
-	userRepo := repository.NewInMemUserRepository()
+	cluster := gocql.NewCluster("127.0.0.1:9042") // Replace with your Cassandra node IPs
+	cluster.Keyspace = "todolist"                 // The keyspace you created
+	cluster.Consistency = gocql.Quorum
+	cluster.Timeout = 5 * time.Second // Example timeout
+
+	session, err := cluster.CreateSession()
+	if err != nil {
+		log.Fatalf("Could not connect to Cassandra: %v", err)
+	}
+	defer session.Close()
+
+	//taskRepo := repository.NewInMemTaskRepository()
+	//userRepo := repository.NewInMemUserRepository()
+	taskRepo := repository.NewCassandraTaskRepository(session)
+	userRepo := repository.NewCassandraUserRepository(session)
+
 	taskService := services.NewTaskService(taskRepo)
 	userService := services.NewUserService(userRepo)
 
@@ -75,7 +91,7 @@ func main() {
 	}()
 
 	// Run the server
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
