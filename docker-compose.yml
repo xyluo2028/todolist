@@ -3,13 +3,14 @@ version: '3.8'
 
 services:
   cassandra:
-    # ... (cassandra service configuration remains the same)
     image: cassandra:4.1
     container_name: todolist_cassandra
     ports:
       - "9042:9042"
     volumes:
       - cassandra_data:/var/lib/cassandra
+      # Mount the init script to be executed by Cassandra on first start
+      - ./cmd/cassandra/init.cql:/docker-entrypoint-initdb.d/init.cql
     environment:
       - CASSANDRA_CLUSTER_NAME=TodoListCluster
       - CASSANDRA_DC=dc1
@@ -21,28 +22,6 @@ services:
       retries: 10
       start_period: 30s
 
-  cassandra-init:
-    # ... (cassandra-init service configuration remains the same)
-    image: cassandra:4.1
-    container_name: todolist_cassandra_init
-    depends_on:
-      cassandra:
-        condition: service_healthy
-    volumes:
-      - ./cmd/cassandra/init.cql:/scripts/init.cql
-    command: >
-      /bin/bash -c "
-        echo 'Waiting for Cassandra to be fully ready...';
-        until cqlsh cassandra 9042 -e 'describe keyspaces' > /dev/null 2>&1; do
-          echo 'Cassandra not up yet, sleeping...';
-          sleep 5;
-        done;
-        echo 'Cassandra is up. Initializing schema using /scripts/init.cql...';
-        cqlsh cassandra 9042 -f /scripts/init.cql;
-        echo 'Schema initialization attempt finished.';
-      "
-    restart: 'no'
-
   app:
     build:
       context: .  # The build context is still the project root
@@ -51,10 +30,8 @@ services:
     ports:
       - "7071:7071"
     depends_on:
-      cassandra:
+      cassandra: # App now only depends on Cassandra being healthy
         condition: service_healthy
-      cassandra-init:
-        condition: service_completed_successfully
     environment:
       CASSANDRA_HOSTS: "cassandra:9042"
       CASSANDRA_KEYSPACE: "todolist"

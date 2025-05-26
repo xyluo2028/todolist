@@ -127,9 +127,36 @@ nohup go run cmd/server/main.go > logs/todolist.log 2>&1 &
 To stop the server completely, terminate the process:
 
 ```bash
-pkill -TERM -P <PID>
+pkill -TERM -f "go run cmd/server/main.go"
 ```
 
 Replace `<PID>` with the actual process ID of your server.
+
+### Using Docker
+
+Alternatively, you can run the server using Docker Compose, which will also set up and initialize the Cassandra database. Ensure you have a `docker-compose.yml` file in the project root (as provided in the context).
+
+1.  **Build and run the services (app and Cassandra):**
+    ```bash
+    docker-compose up --build -d
+    ```
+    This command will build the `todolist-api` image (if it doesn't exist or if changes are detected) and start all services defined in `docker-compose.yml` in detached mode. The `-d` flag runs containers in the background. The `--build` flag forces a rebuild of the image.
+
+    The application will be available at `http://localhost:7071`.
+
+2.  **To view logs:**
+    ```bash
+    docker-compose logs -f app
+    ```
+    Replace `app` with `cassandra` or `cassandra-init` to view logs for those services.
+
+3.  **To stop and remove the containers, networks, and volumes created by `up`:**
+    ```bash
+    docker-compose down
+    ```
+    If you want to remove volumes defined in the `volumes` section of `docker-compose.yml` (like `cassandra_data`), use:
+    ```bash
+    docker-compose down -v
+    ```
 
 ---
