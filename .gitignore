@@ -1,2 +1,3 @@
 # filepath: /home/ruff588/dev/go-dir/.gitignore
 logs/
+.env

@@ -22,32 +22,45 @@ func main() {
 
 	fmt.Println("Welcome to the Todo List!")
 
-	cassandraHostsEnv := os.Getenv("CASSANDRA_HOSTS")
-	if cassandraHostsEnv == "" {
-		cassandraHostsEnv = "127.0.0.1:9042" // Default for local development
+	storageType := os.Getenv("STORAGE_TYPE")
+	if storageType == "" {
+		storageType = "cassandra" // Default to cassandra
 	}
-	cassandraKeyspaceEnv := os.Getenv("CASSANDRA_KEYSPACE")
-	if cassandraKeyspaceEnv == "" {
-		cassandraKeyspaceEnv = "todolist" // Default keyspace
+	log.Printf("Using storage type: %s", storageType)
+
+	var taskRepo repository.TaskRepository
+	var userRepo repository.UserRepository
+
+	if storageType == "cassandra" {
+		cassandraHostsEnv := os.Getenv("CASSANDRA_HOSTS")
+		if cassandraHostsEnv == "" {
+			cassandraHostsEnv = "127.0.0.1:9042" // Default for local development
+		}
+		cassandraKeyspaceEnv := os.Getenv("CASSANDRA_KEYSPACE")
+		if cassandraKeyspaceEnv == "" {
+			cassandraKeyspaceEnv = "todolist" // Default keyspace
+		}
+
+		cluster := gocql.NewCluster(strings.Split(cassandraHostsEnv, ",")...) // Use configured hosts
+		cluster.Keyspace = cassandraKeyspaceEnv                               // Use configured keyspace
+		cluster.Consistency = gocql.Quorum
+		cluster.Timeout = 5 * time.Second
+
+		session, err := cluster.CreateSession()
+		if err != nil {
+			log.Fatalf("Could not connect to Cassandra: %v", err)
+		}
+		defer session.Close()
+		log.Println("Successfully connected to Cassandra.")
+		taskRepo = repository.NewCassandraTaskRepository(session)
+		userRepo = repository.NewCassandraUserRepository(session)
+	} else if storageType == "inmem" {
+		log.Println("Using in-memory storage.")
+		taskRepo = repository.NewInMemTaskRepository()
+		userRepo = repository.NewInMemUserRepository()
+	} else {
+		log.Fatalf("Invalid STORAGE_TYPE: %s. Supported values are 'cassandra' or 'inmem'.", storageType)
 	}
-
-	cluster := gocql.NewCluster(strings.Split(cassandraHostsEnv, ",")...) // Use configured hosts
-	cluster.Keyspace = cassandraKeyspaceEnv                               // Use configured keyspace
-	cluster.Consistency = gocql.Quorum
-	cluster.Timeout = 5 * time.Second
-
-	session, err := cluster.CreateSession()
-	if err != nil {
-		log.Fatalf("Could not connect to Cassandra: %v", err)
-	}
-	defer session.Close()
-	log.Println("Successfully connected to Cassandra.")
-
-	// ... rest of your main function
-	//taskRepo := repository.NewInMemTaskRepository()
-	//userRepo := repository.NewInMemUserRepository()
-	taskRepo := repository.NewCassandraTaskRepository(session)
-	userRepo := repository.NewCassandraUserRepository(session)
 
 	taskService := services.NewTaskService(taskRepo)
 	userService := services.NewUserService(userRepo)
@@ -69,8 +82,14 @@ func main() {
 	mux.HandleFunc("/deactivate", auth.Authenticate(userHandler.DeleteUser))
 	mux.HandleFunc("/register", userHandler.Register)
 
+	serverPort := os.Getenv("SERVER_PORT")
+	if serverPort == "" {
+		serverPort = "7071" // Default port
+	}
+	serverAddr := ":" + serverPort
+
 	server := &http.Server{
-		Addr:    ":7071",
+		Addr:    serverAddr,
 		Handler: mux,
 	}
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
@@ -99,7 +118,7 @@ func main() {
 	}()
 
 	log.Printf("Server starting on %s", server.Addr)
-	err = server.ListenAndServe()
+	err := server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}

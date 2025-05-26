@@ -124,6 +124,12 @@ Start the server using `go run`:
 nohup go run cmd/server/main.go > logs/todolist.log 2>&1 &
 ```
 
+To run the server without a Cassandra database, using an in-memory store, you can set the `STORAGE_TYPE` environment variable to `inmem`. You can also specify a different port using `SERVER_PORT`. For example:
+
+```bash
+STORAGE_TYPE=inmem SERVER_PORT={your_port} nohup go run cmd/server/main.go > logs/todolist.log 2>&1 &
+```
+
 To stop the server completely, terminate the process:
 
 ```bash
