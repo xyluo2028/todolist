@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 	"todolist/internal/handlers"
@@ -21,17 +22,28 @@ func main() {
 
 	fmt.Println("Welcome to the Todo List!")
 
-	cluster := gocql.NewCluster("127.0.0.1:9042") // Replace with your Cassandra node IPs
-	cluster.Keyspace = "todolist"                 // The keyspace you created
+	cassandraHostsEnv := os.Getenv("CASSANDRA_HOSTS")
+	if cassandraHostsEnv == "" {
+		cassandraHostsEnv = "127.0.0.1:9042" // Default for local development
+	}
+	cassandraKeyspaceEnv := os.Getenv("CASSANDRA_KEYSPACE")
+	if cassandraKeyspaceEnv == "" {
+		cassandraKeyspaceEnv = "todolist" // Default keyspace
+	}
+
+	cluster := gocql.NewCluster(strings.Split(cassandraHostsEnv, ",")...) // Use configured hosts
+	cluster.Keyspace = cassandraKeyspaceEnv                               // Use configured keyspace
 	cluster.Consistency = gocql.Quorum
-	cluster.Timeout = 5 * time.Second // Example timeout
+	cluster.Timeout = 5 * time.Second
 
 	session, err := cluster.CreateSession()
 	if err != nil {
 		log.Fatalf("Could not connect to Cassandra: %v", err)
 	}
 	defer session.Close()
+	log.Println("Successfully connected to Cassandra.")
 
+	// ... rest of your main function
 	//taskRepo := repository.NewInMemTaskRepository()
 	//userRepo := repository.NewInMemUserRepository()
 	taskRepo := repository.NewCassandraTaskRepository(session)
@@ -63,14 +75,11 @@ func main() {
 	}
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 
-	// Listen for syscall signals for process to interrupt/quit
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
 		<-sig
-
-		// Shutdown signal with grace period of 30 seconds
 		shutdownCtx, shutdownCancel := context.WithTimeout(serverCtx, 30*time.Second)
 		defer shutdownCancel()
 
@@ -81,7 +90,6 @@ func main() {
 			}
 		}()
 
-		// Trigger graceful shutdown
 		log.Printf("shutting down server..")
 		err := server.Shutdown(shutdownCtx)
 		if err != nil {
@@ -90,12 +98,11 @@ func main() {
 		serverStopCtx()
 	}()
 
-	// Run the server
+	log.Printf("Server starting on %s", server.Addr)
 	err = server.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 
-	// Wait for server context to be stopped
 	<-serverCtx.Done()
 }
