@@ -78,6 +78,10 @@ func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
 	}
+	if valid, err := h.validTask(task); !valid {
+		http.Error(w, fmt.Sprintf("Invalid task: %v", err), http.StatusBadRequest)
+		return
+	}
 	user, _, _ := r.BasicAuth()
 
 	task, err := h.svc.WriteTask(user, project, task)
@@ -161,4 +165,14 @@ func (h *TaskHandler) RemoveProjectHttp(w http.ResponseWriter, r *http.Request) 
 	}
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "project: %s removed", project)
+}
+
+func (h *TaskHandler) validTask(task models.Task) (bool, error) {
+	if task.Content == "" {
+		return false, fmt.Errorf("task content cannot be empty")
+	}
+	if task.Priority < 0 || task.Priority > 10 {
+		return false, fmt.Errorf("task priority must be between 0 and 10")
+	}
+	return true, nil
 }
