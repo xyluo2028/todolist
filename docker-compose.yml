@@ -28,13 +28,14 @@ services:
       dockerfile: ./deploy/Dockerfile # Path to the Dockerfile relative to the context
     container_name: todolist_app
     ports:
-      - "7071:7071"
+      - "${SERVER_PORT:-7071}:${SERVER_PORT:-7071}"
     depends_on:
       cassandra: # App now only depends on Cassandra being healthy
         condition: service_healthy
     environment:
       CASSANDRA_HOSTS: "cassandra:9042"
       CASSANDRA_KEYSPACE: "todolist"
+      SERVER_PORT: "${SERVER_PORT:-7071}"
     restart: unless-stopped
 
 volumes:
