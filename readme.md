@@ -149,6 +149,7 @@ Alternatively, you can run the server using Docker Compose, which will also set 
     This command will build the `todolist-api` image (if it doesn't exist or if changes are detected) and start all services defined in `docker-compose.yml` in detached mode. The `-d` flag runs containers in the background. The `--build` flag forces a rebuild of the image.
 
     The application will be available at `http://localhost:7071`.
+    To change the port, add a .env file in the root directory of todolist and edit the variable SERVER_PORT={your_port}
 
 2.  **To view logs:**
     ```bash
