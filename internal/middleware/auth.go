@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"todolist/internal/services"
 )
@@ -18,16 +18,21 @@ func NewAuthMiddleware(userService *services.UserService) *AuthMiddleware {
 
 func (m *AuthMiddleware) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		username, password, _ := r.BasicAuth()
-		fmt.Fprintf(w, "Authenticating user %s ... \n \n", username)
+		username, password, ok := r.BasicAuth()
+		if !ok {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Todo App"`)
+			http.Error(w, "Unauthorized: Basic auth required", http.StatusUnauthorized)
+			return
+		}
+		log.Printf("Authenticating user %s ...", username)
 		if !m.userService.AuthenticateUser(username, password) {
 			// Authentication failed
+			log.Printf("User %s authentication failed", username)
 			w.Header().Set("WWW-Authenticate", `Basic realm="Todo App"`)
-			fmt.Fprintf(w, "User %s authentication failed \n", username)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		fmt.Fprintf(w, "User %s authenticated successfully \n \n", username)
+		log.Printf("User %s authenticated successfully", username)
 		next(w, r)
 	}
 }
