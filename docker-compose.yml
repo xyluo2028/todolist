@@ -9,8 +9,6 @@ services:
       - "9042:9042"
     volumes:
       - cassandra_data:/var/lib/cassandra
-      # Mount the init script to be executed by Cassandra on first start
-      - ./cmd/cassandra/init.cql:/docker-entrypoint-initdb.d/init.cql
     environment:
       - CASSANDRA_CLUSTER_NAME=TodoListCluster
       - CASSANDRA_DC=dc1
@@ -21,6 +19,19 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+
+  cassandra-init:
+    image: cassandra:4.1
+    container_name: todolist_cassandra_init
+    depends_on:
+      cassandra:
+        condition: service_healthy
+    volumes:
+      - ./cmd/cassandra/init.cql:/init.cql
+    entrypoint: [ "sh", "-c", "cqlsh cassandra -f /init.cql" ]
+    environment:
+      - CASSANDRA_CONTACT_POINT=cassandra
+    restart: "no"
 
   app:
     build:
