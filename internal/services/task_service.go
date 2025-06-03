@@ -62,6 +62,9 @@ func (svc *TaskService) RemoveProject(user, project string) error {
 }
 
 func (svc *TaskService) RemoveTask(user, project, taskID string) error {
+	if _, exist := svc.repo.GetTask(user, project, taskID); !exist {
+		return fmt.Errorf("task with ID [%s] does not exist in project [%s] for user [%s]", taskID, project, user)
+	}
 	return svc.repo.DeleteTask(user, project, taskID)
 }
 
