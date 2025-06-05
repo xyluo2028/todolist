@@ -113,6 +113,10 @@ func (h *TaskHandler) CompleteTaskHttp(w http.ResponseWriter, r *http.Request) {
 	}
 	err := h.svc.MarkTaskComplete(user, project, key)
 	if err != nil {
+		if err == services.ErrTaskNotFound {
+			http.Error(w, fmt.Sprintf("Task in project %s with key %s not found", project, key), http.StatusNotFound)
+			return
+		}
 		http.Error(w, fmt.Sprintf("Error marking task as complete: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -139,6 +143,10 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 	}
 	err := h.svc.RemoveTask(user, project, key)
 	if err != nil {
+		if err == services.ErrTaskNotFound {
+			http.Error(w, fmt.Sprintf("Task in project %s with key %s not found", project, key), http.StatusNotFound)
+			return
+		}
 		http.Error(w, fmt.Sprintf("Error removing task: %v", err), http.StatusInternalServerError)
 		return
 	}
