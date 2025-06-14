@@ -63,11 +63,6 @@ func (h *TaskHandler) GetAllProjectsHttp(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	project := r.URL.Query().Get("pjt")
 	if project == "" {
 		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
@@ -95,11 +90,6 @@ func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) CompleteTaskHttp(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	key := r.URL.Query().Get("key")
 	user, _, _ := r.BasicAuth()
 	project := r.URL.Query().Get("pjt")
@@ -125,11 +115,6 @@ func (h *TaskHandler) CompleteTaskHttp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	key := r.URL.Query().Get("key")
 	user, _, _ := r.BasicAuth()
 	project := r.URL.Query().Get("pjt")
@@ -155,11 +140,6 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TaskHandler) RemoveProjectHttp(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	project := r.URL.Query().Get("pjt")
 	user, _, _ := r.BasicAuth()
 	if project == "" {
