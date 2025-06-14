@@ -87,24 +87,24 @@ This API implements a simple Todo List using HTTP endpoints. All endpoints (exce
 
 ### Remove a Task
 - **URL:** `/removeTask`
-- **Method:** GET
+- **Method:** DELETE
 - **Query Parameters:** 
   - `pjt` _(project name, required)_
   - `key` _(task ID, required)_
 - **Authentication:** Basic
 - **cURL Example:**
   ```bash
-  curl -X GET -u test:test123 "http://localhost:7071/removeTask?pjt=home&key=task_xxx"
+  curl -X DELETE -u test:test123 "http://localhost:7071/removeTask?pjt=home&key=task_xxx"
   ```
 
 ### Remove a Project
 - **URL:** `/removeProject`
-- **Method:** GET
+- **Method:** DELETE
 - **Query Parameter:** `pjt` _(project name, required)_
 - **Authentication:** Basic
 - **cURL Example:**
   ```bash
-  curl -X GET -u test:test123 "http://localhost:7071/removeProject?pjt=home"
+  curl -X DELETE -u test:test123 "http://localhost:7071/removeProject?pjt=home"
   ```
 
 ### Deactivate (Delete) a User

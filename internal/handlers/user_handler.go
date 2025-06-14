@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"todolist/internal/services"
 )
@@ -19,11 +20,6 @@ func NewUserHandler(userSvc *services.UserService, taskSvc *services.TaskService
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var req struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -43,7 +39,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	log.Printf("User %s registered successfully", req.Username)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "User registered successfully",
@@ -51,11 +47,6 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	username, _, ok := r.BasicAuth()
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -72,7 +63,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, errClearAllTasks.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	log.Printf("User %s deleted successfully", username)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "User deleted successfully",

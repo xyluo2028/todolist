@@ -16,6 +16,7 @@ import (
 	"todolist/internal/services"
 
 	"github.com/gocql/gocql"
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -70,27 +71,27 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService, taskService)
 	auth := middleware.NewAuthMiddleware(userService)
 
-	mux := http.NewServeMux()
+	r := mux.NewRouter()
 
-	mux.HandleFunc("/welcome", auth.Authenticate(welcomeHandler.Welcome))
-	mux.HandleFunc("/printTasks", auth.Authenticate(taskHandler.GetAllTasksFromPjtHttp))
-	mux.HandleFunc("/printProjects", auth.Authenticate(taskHandler.GetAllProjectsHttp))
-	mux.HandleFunc("/writeTask", auth.Authenticate(taskHandler.WriteTaskHttp))
-	mux.HandleFunc("/completeTask", auth.Authenticate(taskHandler.CompleteTaskHttp))
-	mux.HandleFunc("/removeTask", auth.Authenticate(taskHandler.RemoveTaskHttp))
-	mux.HandleFunc("/removeProject", auth.Authenticate(taskHandler.RemoveProjectHttp))
-	mux.HandleFunc("/deactivate", auth.Authenticate(userHandler.DeleteUser))
-	mux.HandleFunc("/register", userHandler.Register)
+	r.HandleFunc("/welcome", auth.Authenticate(welcomeHandler.Welcome)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/printTasks", auth.Authenticate(taskHandler.GetAllTasksFromPjtHttp)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/printProjects", auth.Authenticate(taskHandler.GetAllProjectsHttp)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/writeTask", auth.Authenticate(taskHandler.WriteTaskHttp)).Methods("POST", "OPTIONS")
+	r.HandleFunc("/completeTask", auth.Authenticate(taskHandler.CompleteTaskHttp)).Methods("GET", "OPTIONS")
+	r.HandleFunc("/removeTask", auth.Authenticate(taskHandler.RemoveTaskHttp)).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/removeProject", auth.Authenticate(taskHandler.RemoveProjectHttp)).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/deactivate", auth.Authenticate(userHandler.DeleteUser)).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/register", userHandler.Register).Methods("POST", "OPTIONS")
 
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == "" {
 		serverPort = "7071" // Default port
 	}
 	serverAddr := ":" + serverPort
-
+	handler := middleware.CORS(r)
 	server := &http.Server{
 		Addr:    serverAddr,
-		Handler: mux,
+		Handler: handler,
 	}
 	serverCtx, serverStopCtx := context.WithCancel(context.Background())
 
