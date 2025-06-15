@@ -82,7 +82,7 @@ func main() {
 	r.HandleFunc("/removeProject", auth.Authenticate(taskHandler.RemoveProjectHttp)).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/deactivate", auth.Authenticate(userHandler.DeleteUser)).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/register", userHandler.Register).Methods("POST", "OPTIONS")
-
+	r.HandleFunc("/createProject", auth.Authenticate(taskHandler.CreateProjectHttp)).Methods("POST", "OPTIONS")
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == "" {
 		serverPort = "7071" // Default port

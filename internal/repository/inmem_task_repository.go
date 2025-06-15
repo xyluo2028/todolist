@@ -9,19 +9,37 @@ import (
 )
 
 type InMemTaskRepository struct {
-	mu    sync.RWMutex
-	tasks map[string]map[string]map[string]models.Task
+	mu       sync.RWMutex
+	tasks    map[string]map[string]map[string]models.Task
+	projects map[string]map[string]struct{} // username -> project -> struct{} for existence check
 }
 
 func NewInMemTaskRepository() *InMemTaskRepository {
 	return &InMemTaskRepository{
-		tasks: make(map[string]map[string]map[string]models.Task),
+		tasks:    make(map[string]map[string]map[string]models.Task),
+		projects: make(map[string]map[string]struct{}), // Initialize projects map
 	}
+}
+
+func (repo *InMemTaskRepository) CreateProject(username, project string) error {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+	if _, exists := repo.projects[username]; !exists {
+		repo.projects[username] = make(map[string]struct{})
+	}
+	if _, exists := repo.projects[username][project]; !exists {
+		repo.projects[username][project] = struct{}{}
+	}
+	return nil
 }
 
 func (repo *InMemTaskRepository) CreateTask(username, project string, task models.Task) error {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
+
+	if _, exists := repo.projects[username][project]; !exists {
+		return fmt.Errorf("project %s does not exist for user %s", project, username)
+	}
 
 	if _, exists := repo.tasks[username]; !exists {
 		repo.tasks[username] = make(map[string]map[string]models.Task)
@@ -44,8 +62,8 @@ func (repo *InMemTaskRepository) ListProjects(username string) ([]string, error)
 		fmt.Println("User not found")
 		return []string{}, nil
 	}
-	projects := make([]string, 0, len(repo.tasks[username]))
-	for project := range repo.tasks[username] {
+	projects := make([]string, 0, len(repo.projects[username]))
+	for project := range repo.projects[username] {
 		projects = append(projects, project)
 	}
 	return projects, nil
@@ -88,6 +106,7 @@ func (repo *InMemTaskRepository) DeleteProject(username, project string) error {
 	repo.mu.RLock()
 	defer repo.mu.RUnlock()
 	delete(repo.tasks[username], project)
+	delete(repo.projects[username], project)
 	return nil
 }
 

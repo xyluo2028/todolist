@@ -27,3 +27,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   completed     boolean,
   PRIMARY KEY ((username), project, id)
 ) WITH CLUSTERING ORDER BY (project ASC, id ASC);
+
+-- Projects table
+CREATE TABLE IF NOT EXISTS projects (
+  username  text,
+  project   text PRIMARY KEY
+);
