@@ -2,8 +2,8 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"time"
 	"todolist/internal/models"
 
@@ -18,9 +18,25 @@ func NewCassandraTaskRepository(session *gocql.Session) *CassandraTaskRepository
 	return &CassandraTaskRepository{session: session}
 }
 
+func (repo *CassandraTaskRepository) CreateProject(username, project string) error {
+	query := "INSERT INTO projects (username, project) VALUES (?, ?)"
+	err := repo.session.Query(query, username, project).Exec()
+	if err != nil {
+		return fmt.Errorf("error creating project %s for user %s: %w", project, username, err)
+	}
+	return nil
+}
+
 func (repo *CassandraTaskRepository) CreateTask(username, project string, task models.Task) error {
-	if task.ID == "" {
-		return errors.New("task ID cannot be empty")
+	var existing string
+	if err := repo.session.Query(
+		`SELECT project FROM todolist.projects WHERE project = ?`,
+		project,
+	).Scan(&existing); err != nil {
+		if err == gocql.ErrNotFound {
+			return fmt.Errorf("project %q does not exist", project)
+		}
+		return fmt.Errorf("failed to verify project existence: %w", err)
 	}
 	query := "INSERT INTO tasks (username, project, id, content, priority, updated_time, due, completed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 	err := repo.session.Query(query, username, project, task.ID, task.Content, task.Priority, time.Now(), task.Due, task.Completed).Exec()
@@ -76,21 +92,18 @@ func (repo *CassandraTaskRepository) GetTask(username, project, taskID string) (
 }
 
 func (repo *CassandraTaskRepository) ListProjects(username string) ([]string, error) {
-	projectSet := make(map[string]struct{}) // Using a map as a set for deduplication
 	var projects []string
 
-	query := "SELECT project FROM tasks WHERE username = ?"
+	query := "SELECT project FROM tasks WHERE username = ? ALLOW FILTERING"
 	iter := repo.session.Query(query, username).Iter()
 
 	var projectName string
 	for iter.Scan(&projectName) {
-		if _, exists := projectSet[projectName]; !exists {
-			projectSet[projectName] = struct{}{}
-			projects = append(projects, projectName)
-		}
+		projects = append(projects, projectName)
 	}
 
 	if err := iter.Close(); err != nil {
+		log.Printf("Error iterating over projects for user %s: %v", username, err)
 		return nil, fmt.Errorf("error listing projects for user %s: %w", username, err)
 	}
 
@@ -102,6 +115,11 @@ func (repo *CassandraTaskRepository) DeleteProject(username, project string) err
 	err := repo.session.Query(query, username, project).Exec()
 	if err != nil {
 		return fmt.Errorf("error deleting project %s for user %s: %w", project, username, err)
+	}
+	query = "DELETE FROM projects WHERE username = ? AND project = ?"
+	err = repo.session.Query(query, username, project).Exec()
+	if err != nil {
+		return fmt.Errorf("error deleting project entry %s for user %s: %w", project, username, err)
 	}
 	return nil
 }

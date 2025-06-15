@@ -37,7 +37,7 @@ This API implements a simple Todo List using HTTP endpoints. All endpoints (exce
 - **Method:** POST
 - **Query Parameter:** `pjt` _(project name, required)_
 - **Authentication:** Basic
-- **Body:** JSON representation of a task (see [Task](./internal/models/task.go)); `id` is optional. If omitted, the server will generate a new one. The `updatedTime` field is set server-side.
+- **Body:** JSON representation of a task (see [Task](./internal/models/task.go)); `id` is optional. If omitted, the server will generate a new one. The `updatedTime` field is set server-side. Project must exist, if not method return error
 - **Body Example:**
   ```json
   {
@@ -105,6 +105,16 @@ This API implements a simple Todo List using HTTP endpoints. All endpoints (exce
 - **cURL Example:**
   ```bash
   curl -X DELETE -u test:test123 "http://localhost:7071/removeProject?pjt=home"
+  ```
+
+### Create a Project
+- **URL:** `/createProject`
+- **Method:** POST
+- **Query Parameter:** `pjt` _(project name, required)_
+- **Authentication:** Basic
+- **cURL Example:**
+  ```bash
+  curl -X POST -u test:test123 "http://localhost:7071/createProject?pjt=home"
   ```
 
 ### Deactivate (Delete) a User

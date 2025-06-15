@@ -4,6 +4,7 @@ import "todolist/internal/models"
 
 type TaskRepository interface {
 	CreateTask(username, project string, task models.Task) error
+	CreateProject(username, project string) error
 	ListTasks(username, project string) ([]models.Task, error)
 	ListProjects(username string) ([]string, error)
 	GetTask(username, project, taskID string) (models.Task, bool)

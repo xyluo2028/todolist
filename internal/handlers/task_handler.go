@@ -62,6 +62,21 @@ func (h *TaskHandler) GetAllProjectsHttp(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+func (h *TaskHandler) CreateProjectHttp(w http.ResponseWriter, r *http.Request) {
+	user, _, _ := r.BasicAuth()
+	project := r.URL.Query().Get("pjt")
+	if project == "" {
+		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
+		return
+	}
+	if err := h.svc.CreateProject(user, project); err != nil {
+		http.Error(w, fmt.Sprintf("Error creating project: %v", err), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Project '%s' created successfully", project)
+}
+
 func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
 	project := r.URL.Query().Get("pjt")
 	if project == "" {

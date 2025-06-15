@@ -1,7 +1,6 @@
 package services
 
 import (
-	"errors"
 	"fmt"
 	"time"
 	"todolist/internal/models"
@@ -20,10 +19,11 @@ func NewTaskService(repo repository.TaskRepository) *TaskService {
 	return &TaskService{repo: repo}
 }
 
+func (svc *TaskService) CreateProject(user, project string) error {
+	return svc.repo.CreateProject(user, project)
+}
+
 func (svc *TaskService) WriteTask(user, project string, task models.Task) (models.Task, error) {
-	if task.Content == "" {
-		return models.Task{}, errors.New("task content cannot be empty")
-	}
 	if task.ID == "" {
 		task.ID = fmt.Sprintf("task_%s", uuid.New().String())
 	}
