@@ -94,7 +94,7 @@ func (repo *CassandraTaskRepository) GetTask(username, project, taskID string) (
 func (repo *CassandraTaskRepository) ListProjects(username string) ([]string, error) {
 	var projects []string
 
-	query := "SELECT project FROM tasks WHERE username = ? ALLOW FILTERING"
+	query := "SELECT project FROM projects WHERE username = ? ALLOW FILTERING"
 	iter := repo.session.Query(query, username).Iter()
 
 	var projectName string

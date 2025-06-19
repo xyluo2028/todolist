@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"todolist/internal/models"
 	"todolist/internal/services"
@@ -20,6 +21,8 @@ func (h *TaskHandler) GetAllTasksFromPjtHttp(w http.ResponseWriter, r *http.Requ
 	user, _, _ := r.BasicAuth()
 	project := r.URL.Query().Get("pjt")
 	tasks, err := h.svc.GetTasks(user, project)
+	log.Printf("Retrieving tasks for user '%s', URI = '%s', method = '%s', project = '%s'", user, r.RequestURI, r.Method, project)
+
 	if err != nil {
 		http.Error(w, "Error retrieving tasks", http.StatusInternalServerError)
 		return
@@ -45,6 +48,7 @@ func (h *TaskHandler) GetAllTasksFromPjtHttp(w http.ResponseWriter, r *http.Requ
 
 func (h *TaskHandler) GetAllProjectsHttp(w http.ResponseWriter, r *http.Request) {
 	user, _, _ := r.BasicAuth()
+	log.Printf("Retrieving projects for user '%s', URI = '%s', method = '%s'", user, r.RequestURI, r.Method)
 	projects, err := h.svc.GetProjects(user)
 	if err != nil {
 		http.Error(w, "Error retrieving projects", http.StatusInternalServerError)
@@ -69,6 +73,8 @@ func (h *TaskHandler) CreateProjectHttp(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
 		return
 	}
+	log.Printf("Creating project '%s' for user '%s', URI= '%s', method= '%s'", project, user, r.RequestURI, r.Method)
+
 	if err := h.svc.CreateProject(user, project); err != nil {
 		http.Error(w, fmt.Sprintf("Error creating project: %v", err), http.StatusInternalServerError)
 		return
@@ -88,6 +94,8 @@ func (h *TaskHandler) WriteTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
 	}
+	log.Printf("Writing task for project '%s', URI= '%s', method= '%s', task= '%s'", project, r.RequestURI, r.Method, task)
+
 	if valid, err := h.validTask(task); !valid {
 		http.Error(w, fmt.Sprintf("Invalid task: %v", err), http.StatusBadRequest)
 		return
@@ -116,6 +124,8 @@ func (h *TaskHandler) CompleteTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
 		return
 	}
+	log.Printf("Completing task '%s' for project '%s', URI= '%s', method= '%s'", key, project, r.RequestURI, r.Method)
+
 	err := h.svc.MarkTaskComplete(user, project, key)
 	if err != nil {
 		if err == services.ErrTaskNotFound {
@@ -141,6 +151,7 @@ func (h *TaskHandler) RemoveTaskHttp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Key query parameter 'key' is required", http.StatusBadRequest)
 		return
 	}
+	log.Printf("Removing task '%s' for project '%s', URI= '%s', method= '%s'", key, project, r.RequestURI, r.Method)
 	err := h.svc.RemoveTask(user, project, key)
 	if err != nil {
 		if err == services.ErrTaskNotFound {
@@ -161,6 +172,7 @@ func (h *TaskHandler) RemoveProjectHttp(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Project query parameter 'pjt' is required", http.StatusBadRequest)
 		return
 	}
+	log.Printf("Removing project '%s' for user '%s', URI= '%s', method= '%s'", project, user, r.RequestURI, r.Method)
 	err := h.svc.RemoveProject(user, project)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error removing project: %v", err), http.StatusInternalServerError)
