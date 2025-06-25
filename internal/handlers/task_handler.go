@@ -33,16 +33,10 @@ func (h *TaskHandler) GetAllTasksFromPjtHttp(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	fmt.Fprintln(w, "Todos: ")
-	tasknum := 0
-	for _, task := range tasks {
-		data, err := json.Marshal(task)
-		if err != nil {
-			http.Error(w, "Error serializing task", http.StatusInternalServerError)
-			return
-		}
-		fmt.Fprintf(w, "Task %d: %s \n", tasknum, string(data))
-		tasknum++
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(tasks); err != nil {
+		http.Error(w, "Error serializing tasks", http.StatusInternalServerError)
+		return
 	}
 }
 
