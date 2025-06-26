@@ -31,5 +31,6 @@ CREATE TABLE IF NOT EXISTS tasks (
 -- Projects table
 CREATE TABLE IF NOT EXISTS projects (
   username  text,
-  project   text PRIMARY KEY
+  project   text,
+  PRIMARY KEY (username, project)
 );

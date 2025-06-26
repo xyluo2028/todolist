@@ -54,7 +54,6 @@ func (h *TaskHandler) GetAllProjectsHttp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	fmt.Fprintln(w, "Projects: ")
 	for _, project := range projects {
 		fmt.Fprintf(w, "%s \n", project)
 	}
