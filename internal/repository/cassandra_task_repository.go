@@ -30,7 +30,7 @@ func (repo *CassandraTaskRepository) CreateProject(username, project string) err
 func (repo *CassandraTaskRepository) CreateTask(username, project string, task models.Task) error {
 	var existing string
 	if err := repo.session.Query(
-		`SELECT project FROM todolist.projects WHERE project = ?`,
+		`SELECT project FROM todolist.projects WHERE project = ? ALLOW FILTERING`,
 		project,
 	).Scan(&existing); err != nil {
 		if err == gocql.ErrNotFound {
@@ -79,13 +79,13 @@ func (repo *CassandraTaskRepository) CompleteTask(username, project, taskID stri
 
 func (repo *CassandraTaskRepository) GetTask(username, project, taskID string) (models.Task, bool) {
 	var task models.Task
-	query := "SELECT id, content, priority, updated_time, due, completed FROM tasks WHERE username = ? AND project = ? AND id = ?"
+	query := "SELECT id, content, priority, updated_time, due, completed FROM tasks WHERE username = ? AND project = ? AND id = ? ALLOW FILTERING"
 	err := repo.session.Query(query, username, project, taskID).Scan(&task.ID, &task.Content, &task.Priority, &task.UpdatedTime, &task.Due, &task.Completed)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return task, false
 		}
-		fmt.Println("Error retrieving task:", err)
+		log.Println("Error retrieving task:", err)
 		return task, false
 	}
 	return task, true
@@ -94,7 +94,7 @@ func (repo *CassandraTaskRepository) GetTask(username, project, taskID string) (
 func (repo *CassandraTaskRepository) ListProjects(username string) ([]string, error) {
 	var projects []string
 
-	query := "SELECT project FROM projects WHERE username = ? ALLOW FILTERING"
+	query := "SELECT project FROM projects WHERE username = ?"
 	iter := repo.session.Query(query, username).Iter()
 
 	var projectName string
@@ -114,11 +114,13 @@ func (repo *CassandraTaskRepository) DeleteProject(username, project string) err
 	query := "DELETE FROM tasks WHERE username = ? AND project = ?"
 	err := repo.session.Query(query, username, project).Exec()
 	if err != nil {
-		return fmt.Errorf("error deleting project %s for user %s: %w", project, username, err)
+		log.Printf("Error deleting tasks in project %s for user %s: %v", project, username, err)
+		return fmt.Errorf("error deleting tasks in project %s for user %s: %w", project, username, err)
 	}
 	query = "DELETE FROM projects WHERE username = ? AND project = ?"
 	err = repo.session.Query(query, username, project).Exec()
 	if err != nil {
+		log.Printf("Error deleting project entry %s for user %s: %v", project, username, err)
 		return fmt.Errorf("error deleting project entry %s for user %s: %w", project, username, err)
 	}
 	return nil
