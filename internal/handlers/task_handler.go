@@ -176,8 +176,14 @@ func (h *TaskHandler) RemoveProjectHttp(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *TaskHandler) validTask(task models.Task) (bool, error) {
-	if task.Content == "" {
-		return false, fmt.Errorf("task content cannot be empty")
+	if task.Title == "" {
+		return false, fmt.Errorf("task title cannot be empty")
+	}
+	if len(task.Title) > 100 {
+		return false, fmt.Errorf("task title exceeds 100 characters")
+	}
+	if len(task.Content) > 1000 {
+		return false, fmt.Errorf("task content exceeds 1000 characters")
 	}
 	if task.Priority < 0 || task.Priority > 10 {
 		return false, fmt.Errorf("task priority must be between 0 and 10")
