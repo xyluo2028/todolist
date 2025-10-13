@@ -37,22 +37,23 @@ This API implements a simple Todo List using HTTP endpoints. All endpoints (exce
 - **Method:** POST
 - **Query Parameter:** `pjt` _(project name, required)_
 - **Authentication:** Basic
-- **Body:** JSON representation of a task (see [Task](./internal/models/task.go)); `id` is optional. If omitted, the server will generate a new one. The `updatedTime` field is set server-side. Project must exist, if not method return error
+- **Body:** JSON representation of a task (see [Task](./internal/models/task.go)). `title` is required (max 100 characters). `content` is optional (max 1000 characters). `id` is optional; if omitted, the server will generate a new one. The `updatedTime` field is set server-side. Project must exist, if not method return error
 - **Body Example:**
   ```json
   {
-      "content": "Buy groceries",
+      "title": "Grocery run",
+      "content": "Buy milk, eggs, and bread",
       "priority": 2,
       "due": "2025-05-09T15:04:05Z",
       "completed": false
   }
   ```
 - **cURL Example:**
-  ```bash
-  curl -X POST -u test:test123 "http://localhost:7071/writeTask?pjt=home" \
-    -H 'Content-Type: application/json' \
-    -d '{"content":"Buy groceries","priority":2,"due":"2025-05-09T15:04:05Z","completed":false}'
-  ```
+```bash
+curl -X POST -u test:test123 "http://localhost:7071/writeTask?pjt=home" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Grocery run","content":"Buy milk, eggs, and bread","priority":2,"due":"2025-05-09T15:04:05Z","completed":false}'
+```
 
 ### Get All Tasks for a Project
 - **URL:** `/printTasks`

@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   username      text,
   project       text,
   id            text,
+  title         text,
   content       text,
   priority      int,
   updated_time  timestamp,

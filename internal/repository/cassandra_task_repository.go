@@ -38,19 +38,19 @@ func (repo *CassandraTaskRepository) CreateTask(username, project string, task m
 		}
 		return fmt.Errorf("failed to verify project existence: %w", err)
 	}
-	query := "INSERT INTO tasks (username, project, id, content, priority, updated_time, due, completed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-	err := repo.session.Query(query, username, project, task.ID, task.Content, task.Priority, time.Now(), task.Due, task.Completed).Exec()
+	query := "INSERT INTO tasks (username, project, id, title, content, priority, updated_time, due, completed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	err := repo.session.Query(query, username, project, task.ID, task.Title, task.Content, task.Priority, time.Now(), task.Due, task.Completed).Exec()
 	return err
 }
 
 func (repo *CassandraTaskRepository) ListTasks(username, project string) ([]models.Task, error) {
 	var tasks []models.Task
-	query := "SELECT id, content, priority, updated_time, due, completed FROM tasks WHERE username = ? AND project = ?"
+	query := "SELECT id, title, content, priority, updated_time, due, completed FROM tasks WHERE username = ? AND project = ?"
 	iter := repo.session.Query(query, username, project).Iter()
 	defer iter.Close()
 
 	var task models.Task
-	for iter.Scan(&task.ID, &task.Content, &task.Priority, &task.UpdatedTime, &task.Due, &task.Completed) {
+	for iter.Scan(&task.ID, &task.Title, &task.Content, &task.Priority, &task.UpdatedTime, &task.Due, &task.Completed) {
 		tasks = append(tasks, task)
 	}
 	if err := iter.Close(); err != nil {
@@ -60,8 +60,8 @@ func (repo *CassandraTaskRepository) ListTasks(username, project string) ([]mode
 }
 
 func (repo *CassandraTaskRepository) UpdateTask(username, project string, task models.Task) error {
-	query := "UPDATE tasks SET content = ?, priority = ?, updated_time = ?, due = ?, completed = ? WHERE username = ? AND project = ? AND id = ?"
-	err := repo.session.Query(query, task.Content, task.Priority, time.Now(), task.Due, task.Completed, username, project, task.ID).Exec()
+	query := "UPDATE tasks SET title = ?, content = ?, priority = ?, updated_time = ?, due = ?, completed = ? WHERE username = ? AND project = ? AND id = ?"
+	err := repo.session.Query(query, task.Title, task.Content, task.Priority, time.Now(), task.Due, task.Completed, username, project, task.ID).Exec()
 	return err
 }
 
@@ -79,8 +79,8 @@ func (repo *CassandraTaskRepository) CompleteTask(username, project, taskID stri
 
 func (repo *CassandraTaskRepository) GetTask(username, project, taskID string) (models.Task, bool) {
 	var task models.Task
-	query := "SELECT id, content, priority, updated_time, due, completed FROM tasks WHERE username = ? AND project = ? AND id = ? ALLOW FILTERING"
-	err := repo.session.Query(query, username, project, taskID).Scan(&task.ID, &task.Content, &task.Priority, &task.UpdatedTime, &task.Due, &task.Completed)
+	query := "SELECT id, title, content, priority, updated_time, due, completed FROM tasks WHERE username = ? AND project = ? AND id = ? ALLOW FILTERING"
+	err := repo.session.Query(query, username, project, taskID).Scan(&task.ID, &task.Title, &task.Content, &task.Priority, &task.UpdatedTime, &task.Due, &task.Completed)
 	if err != nil {
 		if err == gocql.ErrNotFound {
 			return task, false
