@@ -73,6 +73,7 @@ func main() {
 
 	r := mux.NewRouter()
 
+	r.HandleFunc("/healthz", handlers.Health).Methods("GET")
 	r.HandleFunc("/welcome", auth.Authenticate(welcomeHandler.Welcome)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/printTasks", auth.Authenticate(taskHandler.GetAllTasksFromPjtHttp)).Methods("GET", "OPTIONS")
 	r.HandleFunc("/printProjects", auth.Authenticate(taskHandler.GetAllProjectsHttp)).Methods("GET", "OPTIONS")
