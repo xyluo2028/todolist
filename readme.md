@@ -12,9 +12,9 @@ internal/services/   Application logic
 internal/repository/ Cassandra and in-memory storage implementations
 internal/middleware/ Basic authentication and CORS
 internal/models/     User and task models
-deploy/Dockerfile    Backend container build
+deploy/              Backend and Cassandra initialization container builds
 frontend/            React application, npm manifest, and lockfile
-docker-compose.yml   Backend and Cassandra services
+docker-compose.yml   Frontend, backend, and Cassandra deployment
 ```
 
 The backend remains a Go module at the repository root. The frontend has its own npm dependencies and build inside `frontend/`.
@@ -56,24 +56,35 @@ cp frontend/.env.example frontend/.env.local
 
 Set `REACT_APP_API_URL` in that file and restart the React development server. Create React App also embeds this value during `npm run build`.
 
-## Cassandra and Docker
+## Deploy with Docker Compose
 
-The existing Compose setup builds the backend and runs Cassandra. For a new database, initialize its schema before starting the app:
+From the repository root, build and start the whole application:
 
 ```bash
-docker compose up -d cassandra
-docker compose run --rm cassandra-init
-docker compose up --build -d app
+docker compose up --build -d --wait --wait-timeout 300
 ```
 
-The API is available at `http://localhost:7071`. Set `SERVER_PORT` in a root `.env` file to change the exposed API port, and set the frontend API URL to match.
+Open `http://localhost:3000`. Compose starts Cassandra, waits for it to become healthy, initializes the schema, starts the Go API, and then starts the React frontend served by Nginx. The first startup can take a few minutes.
+
+The frontend sends requests to `/api` on its own origin, and Nginx forwards them to the Go service. Direct API access is available at `http://localhost:7071`; `GET /healthz` reports HTTP server health. No frontend environment file is needed for this deployment.
+
+To change the host ports, copy the root `.env.example` to `.env` and edit `FRONTEND_PORT` and/or `SERVER_PORT`:
 
 ```bash
-docker compose logs -f app
+cp .env.example .env
+```
+
+Internal container ports stay fixed, so changing either host port does not require changing the frontend API URL. Go, Node.js, and npm do not need to be installed on the deployment host.
+
+```bash
+docker compose ps -a
+docker compose logs -f app frontend
 docker compose down
 ```
 
-`docker compose down` retains the database volume. Run the React development server separately as described above.
+`docker compose down` retains the `cassandra_data` database volume. The schema initializer uses `CREATE ... IF NOT EXISTS`, adds the task `title` column when upgrading an older database, and preserves existing records. It is safe to run again. Cassandra, the API, and the frontend have health checks and restart policies. Re-run the startup command after code changes to rebuild and apply the updated containers.
+
+## Run Go against local Cassandra
 
 For a locally running Cassandra instance initialized with `cmd/cassandra/init.cql`, start Go directly with:
 
@@ -108,7 +119,7 @@ Make future frontend changes in `frontend/` here. The original frontend reposito
 
 ## API authentication
 
-All API endpoints except registration require HTTP Basic Authentication.
+All API endpoints except registration and `/healthz` require HTTP Basic Authentication.
 
 ## Endpoints
 

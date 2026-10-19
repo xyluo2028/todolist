@@ -1,6 +1,3 @@
-# docker-compose.yml
-version: '3.8'
-
 services:
   cassandra:
     image: cassandra:4.1
@@ -13,41 +10,66 @@ services:
       - CASSANDRA_CLUSTER_NAME=TodoListCluster
       - CASSANDRA_DC=dc1
       - CASSANDRA_RACK=rack1
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'describe keyspaces'"]
       interval: 15s
       timeout: 10s
-      retries: 10
-      start_period: 30s
+      retries: 20
+      start_period: 60s
 
   cassandra-init:
-    image: cassandra:4.1
+    build:
+      context: .
+      dockerfile: deploy/cassandra-init.Dockerfile
     container_name: todolist_cassandra_init
     depends_on:
       cassandra:
         condition: service_healthy
-    volumes:
-      - ./cmd/cassandra/init.cql:/init.cql
-    entrypoint: [ "sh", "-c", "cqlsh cassandra -f /init.cql" ]
-    environment:
-      - CASSANDRA_CONTACT_POINT=cassandra
+    entrypoint: ["sh", "/init.sh"]
     restart: "no"
 
   app:
     build:
-      context: .  # The build context is still the project root
-      dockerfile: ./deploy/Dockerfile # Path to the Dockerfile relative to the context
+      context: .
+      dockerfile: deploy/Dockerfile
     container_name: todolist_app
     ports:
-      - "${SERVER_PORT:-7071}:${SERVER_PORT:-7071}"
+      - "${SERVER_PORT:-7071}:7071"
     depends_on:
-      cassandra: # App now only depends on Cassandra being healthy
-        condition: service_healthy
+      cassandra-init:
+        condition: service_completed_successfully
     environment:
       CASSANDRA_HOSTS: "cassandra:9042"
       CASSANDRA_KEYSPACE: "todolist"
-      SERVER_PORT: "${SERVER_PORT:-7071}"
+      SERVER_PORT: "7071"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:7071/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: /api
+    container_name: todolist_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 
 volumes:
   cassandra_data:

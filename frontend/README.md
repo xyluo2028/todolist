@@ -35,6 +35,12 @@ Edit `REACT_APP_API_URL` in `.env.local`, then restart `npm start`. This setting
 
 Production files are written to `build/`. Configure your static host to serve `index.html` for client routes such as `/projects`.
 
+## Docker deployment
+
+From the repository root, run `docker compose up --build -d --wait --wait-timeout 300` to start the frontend, Go API, and Cassandra together. Open `http://localhost:3000`.
+
+The frontend image builds with Node 22 and serves the production files with Nginx. Requests to `/api` are proxied to the Go service, and client routes fall back to `index.html`. Compose supplies `REACT_APP_API_URL=/api` at build time. Set `FRONTEND_PORT` in the root `.env` to change the published UI port.
+
 ## Authentication Flow
 - Register a user via the **Register** tab under `/auth`.
 - After successful registration you are redirected to the **Login** tab.
