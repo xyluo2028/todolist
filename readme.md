@@ -1,6 +1,114 @@
-# Todo List API
+# Todo List
 
-This API implements a simple Todo List using HTTP endpoints. All endpoints (except registration) require Basic Authentication.
+Todo List contains a Go HTTP API and the TaskFlow React frontend in one repository. Users can register, sign in, manage projects, create and edit tasks, mark tasks complete, and deactivate their accounts.
+
+## Repository layout
+
+```text
+cmd/server/          Go server entry point
+cmd/cassandra/       Cassandra schema initialization
+internal/handlers/   HTTP endpoints
+internal/services/   Application logic
+internal/repository/ Cassandra and in-memory storage implementations
+internal/middleware/ Basic authentication and CORS
+internal/models/     User and task models
+deploy/Dockerfile    Backend container build
+frontend/            React application, npm manifest, and lockfile
+docker-compose.yml   Backend and Cassandra services
+```
+
+The backend remains a Go module at the repository root. The frontend has its own npm dependencies and build inside `frontend/`.
+
+## Prerequisites
+
+- Go 1.22.2 or newer.
+- Node.js 20 or newer and npm. The frontend's `.nvmrc` selects Node 22 when using nvm.
+- Docker with Compose when using the containerized Cassandra backend.
+
+On Windows, run the following commands inside WSL when the checkout is stored on the WSL filesystem.
+
+## Local development
+
+From the repository root, start the backend in one terminal:
+
+```bash
+go mod download
+STORAGE_TYPE=inmem SERVER_PORT=7071 go run ./cmd/server
+```
+
+This uses temporary in-memory storage, which is cleared when the server stops. Stop the server with Ctrl+C.
+
+Start React in a second terminal:
+
+```bash
+cd frontend
+npm ci
+npm start
+```
+
+Open `http://localhost:3000`. The browser calls the API at `http://localhost:7071` directly; the Go server handles CORS. Register through the Register tab, then sign in.
+
+To use another API address, copy the frontend environment example and edit its value:
+
+```bash
+cp frontend/.env.example frontend/.env.local
+```
+
+Set `REACT_APP_API_URL` in that file and restart the React development server. Create React App also embeds this value during `npm run build`.
+
+## Cassandra and Docker
+
+The existing Compose setup builds the backend and runs Cassandra. For a new database, initialize its schema before starting the app:
+
+```bash
+docker compose up -d cassandra
+docker compose run --rm cassandra-init
+docker compose up --build -d app
+```
+
+The API is available at `http://localhost:7071`. Set `SERVER_PORT` in a root `.env` file to change the exposed API port, and set the frontend API URL to match.
+
+```bash
+docker compose logs -f app
+docker compose down
+```
+
+`docker compose down` retains the database volume. Run the React development server separately as described above.
+
+For a locally running Cassandra instance initialized with `cmd/cassandra/init.cql`, start Go directly with:
+
+```bash
+CASSANDRA_HOSTS=127.0.0.1:9042 CASSANDRA_KEYSPACE=todolist go run ./cmd/server
+```
+
+The backend defaults to `STORAGE_TYPE=cassandra`, `SERVER_PORT=7071`, and the Cassandra values shown above.
+
+## Build and verification
+
+From the repository root:
+
+```bash
+go test ./...
+go vet ./...
+go build -o bin/todolist-server ./cmd/server
+npm --prefix frontend ci
+npm --prefix frontend run build
+CI=true npm --prefix frontend test -- --watchAll=false --passWithNoTests
+```
+
+The frontend production output is `frontend/build/`. Configure its static host to serve `index.html` for client routes such as `/projects`. The Go backend and React frontend retain separate build and deployment artifacts.
+
+No automated test cases existed at the time of consolidation; the frontend test command allows that baseline. Before importing the frontend, `go test ./...` and `go vet ./...` reported an existing recursive formatting call in `internal/models/task.go`. `go test -vet=off ./...` and the backend build pass. In-memory project listing also has an existing issue: a new user's projects are not listed until their first task exists. These issues are separate from the repository move.
+
+## Repository consolidation
+
+The frontend was imported from `xyluo2028/todolist-fe-react` at commit `812ba755ebb0a31584d125e75c9244ceb45b3dd1` into `frontend/` using Git subtree without squashing. Its original commits and authors are retained in this repository's history. The backend starting commit was `7d2b1d059143663cbf50489029a7848a113ef539`.
+
+Make future frontend changes in `frontend/` here. The original frontend repository can be deprecated after the consolidation is reviewed and merged.
+
+## API authentication
+
+All API endpoints except registration require HTTP Basic Authentication.
 
 ## Endpoints
 
@@ -126,55 +234,3 @@ curl -X POST -u test:test123 "http://localhost:7071/writeTask?pjt=home" \
   ```bash
   curl -X DELETE -u test:test123 http://localhost:7071/deactivate
   ```
-
-## Running the Server
-
-Start the server using `go run`:
-
-```bash
-nohup go run cmd/server/main.go > logs/todolist.log 2>&1 &
-```
-
-To run the server without a Cassandra database, using an in-memory store, you can set the `STORAGE_TYPE` environment variable to `inmem`. You can also specify a different port using `SERVER_PORT`. For example:
-
-```bash
-STORAGE_TYPE=inmem SERVER_PORT={your_port} nohup go run cmd/server/main.go > logs/todolist.log 2>&1 &
-```
-
-To stop the server completely, terminate the process:
-
-```bash
-pkill -TERM -f "go run cmd/server/main.go"
-```
-
-Replace `<PID>` with the actual process ID of your server.
-
-### Using Docker
-
-Alternatively, you can run the server using Docker Compose, which will also set up and initialize the Cassandra database. Ensure you have a `docker-compose.yml` file in the project root (as provided in the context).
-
-1.  **Build and run the services (app and Cassandra):**
-    ```bash
-    docker-compose up --build -d
-    ```
-    This command will build the `todolist-api` image (if it doesn't exist or if changes are detected) and start all services defined in `docker-compose.yml` in detached mode. The `-d` flag runs containers in the background. The `--build` flag forces a rebuild of the image.
-
-    The application will be available at `http://localhost:7071`.
-    To change the port, add a .env file in the root directory of todolist and edit the variable SERVER_PORT={your_port}
-
-2.  **To view logs:**
-    ```bash
-    docker-compose logs -f app
-    ```
-    Replace `app` with `cassandra` or `cassandra-init` to view logs for those services.
-
-3.  **To stop and remove the containers, networks, and volumes created by `up`:**
-    ```bash
-    docker-compose down
-    ```
-    If you want to remove volumes defined in the `volumes` section of `docker-compose.yml` (like `cassandra_data`), use:
-    ```bash
-    docker-compose down -v
-    ```
-
----
