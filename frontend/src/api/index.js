@@ -4,11 +4,16 @@ const apiClient = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:7071',
 });
 
-const authConfig = (auth) => ({
-  headers: {
-    Authorization: `Basic ${btoa(`${auth.username}:${auth.password}`)}`,
-  },
-});
+const authConfig = (auth) => {
+  const bytes = new TextEncoder().encode(`${auth.username}:${auth.password}`);
+  const credentials = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('');
+
+  return {
+    headers: {
+      Authorization: `Basic ${btoa(credentials)}`,
+    },
+  };
+};
 
 export const api = {
   register: (username, password) => apiClient.post('/register', { username, password }),

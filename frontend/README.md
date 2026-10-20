@@ -59,10 +59,10 @@ src/
 
 ```bash
 npm run build
-CI=true npm test -- --watchAll=false --passWithNoTests
+CI=true npm test -- --watchAll=false --runInBand
 ```
 
-There are currently no automated frontend test cases.
+Regression tests cover Unicode credentials, project names containing percent signs, and task failures that must preserve existing tasks and unsaved drafts. Jest maps React Router's CommonJS entry points explicitly because the existing Create React App test runner does not resolve its newer package exports.
 
 ## Repository history
 

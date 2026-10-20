@@ -4,32 +4,20 @@ import TaskList from '../components/TaskList';
 import { api } from '../api';
 
 function Tasks() {
-  const { projectName } = useParams();
-  const decodedProjectName = useMemo(
-    () => (projectName ? decodeURIComponent(projectName) : ''),
-    [projectName]
-  );
+  const { projectName = '' } = useParams();
   const auth = useMemo(() => JSON.parse(sessionStorage.getItem('auth')), []);
   const [tasks, setTasks] = useState([]);
+  const [loadError, setLoadError] = useState('');
 
-  const loadTasks = useCallback(async (newTask, key, action) => {
+  const loadTasks = useCallback(async () => {
     try {
-      if (!decodedProjectName) {
-        if (newTask || action) {
-          console.warn("Cannot perform task operations without a project selected.");
-        }
+      if (!projectName) {
         setTasks([]);
+        setLoadError('');
         return;
       }
 
-      if (action === 'complete') {
-        await api.completeTask(decodedProjectName, key, auth);
-      } else if (action === 'remove') {
-        await api.removeTask(decodedProjectName, key, auth);
-      } else if (newTask) {
-        await api.writeTask(decodedProjectName, newTask, auth);
-      }
-      const res = await api.getTasks(decodedProjectName, auth);
+      const res = await api.getTasks(projectName, auth);
 
       let data = res.data;
 
@@ -52,17 +40,34 @@ function Tasks() {
       }
 
       setTasks(list);
+      setLoadError('');
     } catch (error) {
-      console.error('Failed to process tasks:', error);
-      setTasks([]);
+      console.error('Failed to load tasks:', error);
+      setLoadError('Unable to refresh tasks. Please try again.');
     }
-  }, [decodedProjectName, auth]);
+  }, [projectName, auth]);
+
+  const refreshTasks = async (newTask, key, action) => {
+    if (!projectName) {
+      throw new Error('Select a project before changing tasks.');
+    }
+
+    if (action === 'complete') {
+      await api.completeTask(projectName, key, auth);
+    } else if (action === 'remove') {
+      await api.removeTask(projectName, key, auth);
+    } else if (newTask) {
+      await api.writeTask(projectName, newTask, auth);
+    }
+
+    await loadTasks();
+  };
 
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
 
-  const subtitle = decodedProjectName
+  const subtitle = projectName
     ? 'Add, schedule, and complete tasks to keep this project on track.'
     : 'Pick a project to dive into its backlog and start moving items forward.';
 
@@ -70,13 +75,22 @@ function Tasks() {
     <section className="section-card">
       <div className="section-header">
         <h2 className="section-title">
-          {decodedProjectName ? `Project · ${decodedProjectName}` : 'Tasks overview'}
+          {projectName ? `Project · ${projectName}` : 'Tasks overview'}
         </h2>
         <p className="section-subtitle">{subtitle}</p>
       </div>
 
-      {decodedProjectName ? (
-        <TaskList tasks={tasks} project={decodedProjectName} refresh={loadTasks} />
+      {loadError && (
+        <div className="form-actions" role="alert">
+          <p className="section-subtitle">{loadError}</p>
+          <button type="button" className="btn btn--secondary" onClick={loadTasks}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {projectName ? (
+        <TaskList tasks={tasks} project={projectName} refresh={refreshTasks} />
       ) : (
         <div className="empty-state">
           <p>Choose a project to see its tasks and start moving work forward.</p>

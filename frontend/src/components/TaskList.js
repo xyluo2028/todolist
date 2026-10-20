@@ -39,19 +39,34 @@ function TaskList({ tasks, project, refresh }) {
       payload.content = trimmedContent;
     }
 
-    await refresh(payload);
-    setTitle('');
-    setContent('');
-    setDue('');
-    setPriority(1);
+    try {
+      await refresh(payload);
+      setTitle('');
+      setContent('');
+      setDue('');
+      setPriority(1);
+    } catch (error) {
+      console.error('Failed to add task:', error);
+      alert('Unable to add this task right now. Please try again later.');
+    }
   };
 
   const onComplete = async (id) => {
-    await refresh(null, id, 'complete');
+    try {
+      await refresh(null, id, 'complete');
+    } catch (error) {
+      console.error('Failed to complete task:', error);
+      alert('Unable to complete this task right now. Please try again later.');
+    }
   };
 
   const onRemove = async (id) => {
-    await refresh(null, id, 'remove');
+    try {
+      await refresh(null, id, 'remove');
+    } catch (error) {
+      console.error('Failed to remove task:', error);
+      alert('Unable to delete this task right now. Please try again later.');
+    }
   };
 
   const onUpdate = async (updatedTask) => {

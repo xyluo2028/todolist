@@ -104,12 +104,12 @@ go vet ./...
 go build -o bin/todolist-server ./cmd/server
 npm --prefix frontend ci
 npm --prefix frontend run build
-CI=true npm --prefix frontend test -- --watchAll=false --passWithNoTests
+CI=true npm --prefix frontend test -- --watchAll=false --runInBand
 ```
 
 The frontend production output is `frontend/build/`. Configure its static host to serve `index.html` for client routes such as `/projects`. The Go backend and React frontend retain separate build and deployment artifacts.
 
-No automated test cases existed at the time of consolidation; the frontend test command allows that baseline. Before importing the frontend, `go test ./...` and `go vet ./...` reported an existing recursive formatting call in `internal/models/task.go`. `go test -vet=off ./...` and the backend build pass. In-memory project listing also has an existing issue: a new user's projects are not listed until their first task exists. These issues are separate from the repository move.
+Frontend regression tests cover Unicode credentials, project names, and failed task operations. The backend does not yet have automated test cases. Before importing the frontend, `go test ./...` and `go vet ./...` reported an existing recursive formatting call in `internal/models/task.go`. `go test -vet=off ./...` and the backend build pass. In-memory project listing also has an existing issue: a new user's projects are not listed until their first task exists. These issues are separate from the repository move.
 
 ## Repository consolidation
 
